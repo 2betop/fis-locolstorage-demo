@@ -1,0 +1,11 @@
+{
+  "name": "pc-plugin",
+  "version": "0.1.2",
+  "description": "FIS-plus smarty 插件",
+  "author": "fisteam",
+  "keywords": [
+    "kernal"
+  ],
+  "require_name":"plugin",
+  "license": "MIT"
+}
