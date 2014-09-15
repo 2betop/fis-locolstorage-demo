@@ -64,7 +64,7 @@ class FISResource {
         }
         $jsIntPos = strpos($strContent, self::JS_SCRIPT_HOOK);
         if($jsIntPos !== false){
-            $jsContent = ($frameworkIntPos !== false) ? '' : self::getModJsHtml(); 
+            $jsContent = ($frameworkIntPos !== false) ? '' : self::getModJsHtml();
             $jsContent .= self::render('js') . self::renderScriptPool();
             $strContent = substr_replace($strContent, $jsContent, $jsIntPos, strlen(self::JS_SCRIPT_HOOK));
         }
@@ -121,10 +121,35 @@ class FISResource {
     }
 
     //渲染资源，将收集到的js css，变为html标签，异步js资源变为resorce map。
+    // public static function render($type){
+    //     $html = '';
+    //     if ($type === 'js') {
+    //         if (isset(self::$arrStaticCollection['js'])) {
+    //             $arrURIs = &self::$arrStaticCollection['js'];
+    //             foreach ($arrURIs as $uri) {
+    //                 if ($uri === self::$framework) {
+    //                     continue;
+    //                 }
+    //                 $html .= '<script type="text/javascript" src="' . $uri . '"></script>' . PHP_EOL;
+    //             }
+    //         }
+    //     } else if($type === 'css'){
+    //         if(isset(self::$arrStaticCollection['css'])){
+    //             $arrURIs = &self::$arrStaticCollection['css'];
+    //             $html = '<link rel="stylesheet" type="text/css" href="' . implode('"/><link rel="stylesheet" type="text/css" href="', $arrURIs) . '"/>';
+    //         }
+    //     } else if($type === 'framework'){
+    //         $html .= self::getModJsHtml();
+    //     }
+
+    //     return $html;
+    // }
+
     public static function render($type){
         $html = '';
         if ($type === 'js') {
             if (isset(self::$arrStaticCollection['js'])) {
+                $jses = array();
                 $arrURIs = &self::$arrStaticCollection['js'];
                 foreach ($arrURIs as $uri) {
                     if ($uri === self::$framework) {
@@ -132,6 +157,7 @@ class FISResource {
                     }
                     $html .= '<script type="text/javascript" src="' . $uri . '"></script>' . PHP_EOL;
                 }
+
             }
         } else if($type === 'css'){
             if(isset(self::$arrStaticCollection['css'])){
@@ -145,7 +171,7 @@ class FISResource {
         return $html;
     }
 
-    
+
 
     public static function addScriptPool($str, $priority) {
         $priority = intval($priority);

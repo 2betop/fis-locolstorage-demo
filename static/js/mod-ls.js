@@ -224,15 +224,10 @@ var require, define, F;
         }
     }
 
-    // what does this mean?
-    define.amd = {
-        jQuery: true
-    };
-
     // ------------------------------
 
     F = function(pkgs, callback) {
 
-    }
+    };
 
 })();
