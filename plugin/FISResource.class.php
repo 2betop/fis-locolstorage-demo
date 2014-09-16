@@ -65,7 +65,35 @@ class FISResource {
         $jsIntPos = strpos($strContent, self::JS_SCRIPT_HOOK);
         if($jsIntPos !== false){
             $jsContent = ($frameworkIntPos !== false) ? '' : self::getModJsHtml();
-            $jsContent .= self::render('js') . self::renderScriptPool();
+
+
+            // hack
+
+            $pkgs = array();
+            $script = '';
+            if (isset(self::$arrStaticCollection['js'])) {
+                foreach(self::$arrStaticCollection['js'] as $item) {
+                    preg_match("/\_(.*)\.(js|css)$/", $item['uri'], $match);
+
+                    $pkgs[] = array(
+                        "id" => $item['id'],
+                        "hash" => isset($match) ? $match[1] : md5($item['uri'])
+                    );
+                }
+            }
+
+            if(!empty(self::$arrScriptPool)) {
+                $priorities =  array_keys(self::$arrScriptPool);
+                rsort($priorities);
+                foreach ($priorities as $priority) {
+                    $script .= '!function(){' . implode("}();\n!function(){", self::$arrScriptPool[$priority]) . '}();';
+                }
+            }
+            $jsContent .= '<script type="text/javascript">F.load('.json_encode($pkgs).', function() {'.$script.'})</script>';
+
+            // hack end
+
+            // $jsContent .= self::render('js') . self::renderScriptPool();
             $strContent = substr_replace($strContent, $jsContent, $jsIntPos, strlen(self::JS_SCRIPT_HOOK));
         }
         self::reset();
@@ -148,21 +176,31 @@ class FISResource {
     public static function render($type){
         $html = '';
         if ($type === 'js') {
+
             if (isset(self::$arrStaticCollection['js'])) {
-                $jses = array();
                 $arrURIs = &self::$arrStaticCollection['js'];
+
+                $arr = array();
+
                 foreach ($arrURIs as $uri) {
-                    if ($uri === self::$framework) {
+                    if ($uri['uri'] === self::$framework) {
                         continue;
                     }
-                    $html .= '<script type="text/javascript" src="' . $uri . '"></script>' . PHP_EOL;
+
+                    $html .= '<script type="text/javascript" src="' . $uri['uri'] . '"></script>' . PHP_EOL;
                 }
 
             }
         } else if($type === 'css'){
             if(isset(self::$arrStaticCollection['css'])){
                 $arrURIs = &self::$arrStaticCollection['css'];
-                $html = '<link rel="stylesheet" type="text/css" href="' . implode('"/><link rel="stylesheet" type="text/css" href="', $arrURIs) . '"/>';
+                $arr = [];
+
+                foreach($arrURIs as $item) {
+                    $arr[] = $item['uri'];
+                }
+
+                $html = '<link rel="stylesheet" type="text/css" href="' . implode('"/><link rel="stylesheet" type="text/css" href="', $arr) . '"/>';
             }
         } else if($type === 'framework'){
             $html .= self::getModJsHtml();
@@ -299,7 +337,8 @@ class FISResource {
                 $arrPkg = self::$arrRequireAsyncCollection['pkg'][$arrRes['pkg']];
                 $syncJs = isset(self::$arrStaticCollection['js']) ? self::$arrStaticCollection['js'] : array();
                 if ($arrPkg && !in_array($arrPkg['uri'], $syncJs)) {
-                    self::$arrStaticCollection['js'][] = $arrPkg['uri'];
+                    $arrPkg['id'] = $arrRes['pkg'];
+                    self::$arrStaticCollection['js'][] = $arrPkg;
                     //@TODO
                     //unset(self::$arrRequireAsyncCollection['pkg'][$arrRes['pkg']]);
                     foreach ($arrPkg['has'] as $strHas) {
@@ -314,7 +353,8 @@ class FISResource {
                 }
             } else {
                 //已经分析过的并且在其他文件里同步加载的组件，重新收集在同步输出组
-                self::$arrStaticCollection['js'][] = $arrRes['uri'];
+                $arrRes['id'] = $strName;
+                self::$arrStaticCollection['js'][] = $arrRes;
                 self::$arrLoaded[$strName] = $arrRes['uri'];
                 //@TODO
                 //unset(self::$arrRequireAsyncCollection['res'][$strName]);
@@ -377,7 +417,9 @@ class FISResource {
                             self::$arrRequireAsyncCollection['res'][$strName] = $arrRes;
                         }
                     } else {
-                        self::$arrStaticCollection[$arrRes['type']][] = $strURI;
+                        $arrRes['id'] = isset($arrRes['pkg']) ? $arrRes['pkg'] : $strName;
+                        $arrRes['uri'] = $strURI;
+                        self::$arrStaticCollection[$arrRes['type']][] = $arrRes;
                     }
                     return $strURI;
                 } else {

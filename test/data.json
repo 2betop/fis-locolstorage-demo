@@ -1,0 +1,10 @@
+{
+    "lsdemo:p0" : {
+        "type" : 1,
+        "hash" : "2a0275c",
+        "data" : {
+            "d29a863" : "define('lsdemo:widget/dialog/dialog.js', function(require, exports, module){\nmodule.exports = function() {\n    console.log('dialog');\n};\n});",
+            "2a0275c" : "define('lsdemo:widget/app/entry.js', function(require, exports, module){\n\nvar dialog = require('lsdemo:widget/dialog/dialog.js');\n\nmodule.exports = function() {\n    alert('hoho');\n    dialog();\n}\n});"
+        }
+    }
+}

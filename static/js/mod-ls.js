@@ -224,10 +224,215 @@ var require, define, F;
         }
     }
 
+    define.amd = {};
+
+    // ------------------------------
+    //
     // ------------------------------
 
-    F = function(pkgs, callback) {
+    var storage = (function() {
 
-    };
+        function Base() {
+            var data = {};
 
+            this.get = function(key) {
+                return key ? data[key] : data;
+            };
+
+            this.set = function(key, val) {
+                if (arguments.length == 1) {
+                    data = key;
+                } else {
+                    data[key] = val;
+                    return val;
+                }
+            };
+
+            this.save = this.clear = function() {
+                // implements this.
+            };
+        }
+
+        function LocalStorage() {
+            Base.apply(this, arguments);
+
+            var key = 'fis';
+
+            var str = localStorage[key];
+
+            if (str) {
+                this.set(JSON.parse(str));
+            }
+
+            this.save = function() {
+                localStorage[key] = JSON.stringify(this.get());
+            };
+
+            this.clear = function() {
+                delete localStorage[key];
+            };
+        }
+
+        function indexedDB() {
+            // 待调研
+        }
+
+        function factory() {
+            // 根据运行时能力来实例化一个最优的方案。
+            return new LocalStorage();
+        }
+
+        return factory();
+    })();
+
+    var resource = (function(storage) {
+        var api = {};
+
+        function ajax(url, cb, data) {
+            var xhr = new(window.XMLHttpRequest || ActiveXObject)('Microsoft.XMLHTTP');
+
+            xhr.onreadystatechange = function() {
+                if (this.readyState == 4) {
+                    cb(this.responseText);
+                }
+            };
+            xhr.open(data ? 'POST' : 'GET', url + '&t=' + ~~(Math.random() * 1e6), true);
+
+            if (data) {
+                xhr.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
+            }
+            xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+            xhr.send(data);
+        }
+
+        var head = document.getElementsByTagName('head')[0];
+        function globalEval(code) {
+            var script;
+
+            code = code.replace(/^\s+/, '').replace(/\s+$/, '');
+
+            if (code) {
+                if (code.indexOf('use strict') === 1) {
+                    script = document.createElement('script');
+                    script.text = code;
+                    head.appendChild(script).parentNode.removeChild(script);
+                } else {
+                    eval(code);
+                }
+            }
+        }
+
+        api.getChangeList = function(pkgs, done) {
+            var list = [];
+
+            for (var i = 0, len = pkgs.length; i < len; i++) {
+                var item = pkgs[i];
+                var pkg = storage.get(item.id);
+
+                if (!pkg || pkg.hash !== item.hash) {
+                    list.push(item.id);
+                }
+            }
+
+            if (list.length) {
+                ajax('/ls-diff.php?type=list&pid='+list.join(','), function(response) {
+                    var data = JSON.parse(response);
+
+                    // update list data.
+                    for (var id in data) {
+                        if (!hasProp(data, id)) {
+                            continue;
+                        }
+
+                        var pkg = storage.get(id) || storage.set(id, {});
+                        var item = data[id];
+
+                        pkg.list = item.list;
+                        pkg.hash = item.hash;
+                        pkg.type = item.type;
+
+                        pkg.data = item.data || {};
+                    }
+                    done(data);
+                });
+            } else {
+                done();
+            }
+        };
+
+        api.updatePkgs = function(data) {
+            // update list data.
+            for (var id in data) {
+                if (!hasProp(data, id)) {
+                    continue;
+                }
+
+                var pkg = storage.get(id) || storage.set(id, {});
+                var item = data[id];
+
+                for (var hash in item.data) {
+                    if (!hasProp(item.data, hash)) {
+                        continue;
+                    }
+
+                    pkg.data[hash] = item.data[hash];
+                }
+            }
+
+            storage.save();
+        };
+
+        api.fetchPkgs = function(obj, done) {
+            var params = [];
+
+            for (var key in obj) {
+                if (hasProp(obj, key)) {
+                    var item = obj[key];
+                    params.push('' + key + '=' + item.list.join(',') );
+                }
+            }
+
+            ajax('/ls-diff.php?type=data&'+params.join('&'), function(response) {
+                var data = JSON.parse(response);
+
+                api.updatePkgs(data);
+                done();
+            });
+        };
+
+        api.load = function(pkgs, done) {
+            var runjs = function(data) {
+                if (data) {
+                    api.updatePkgs(data);
+                }
+
+                var js = '';
+                for (var i = 0, len = pkgs.length; i < len; i++) {
+                    var item = pkgs[i];
+                    var pkg = storage.get(item.id);
+                    var hashs = pkg.list;
+
+                    for (var j = 0, ken = hashs.length; j < ken; j++) {
+                        js += pkg.data[hashs[j]];
+                    }
+                }
+                js && globalEval(js);
+                done();
+            };
+
+            api.getChangeList(pkgs, function(data) {
+                if (data) {
+                    api.fetchPkgs(data, runjs);
+                } else {
+                    runjs();
+                }
+            });
+        }
+
+        return api;
+    })(storage);
+
+    // expose
+    F = resource.load;
+    F.load = F;
 })();
