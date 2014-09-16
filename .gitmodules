@@ -1,3 +1,6 @@
 [submodule "ls-diff-plugin"]
 	path = ls-diff-plugin
 	url = https://github.com/wangcheng714/fis-plus-lsidff-plugin.git
+[submodule "data"]
+	path = data
+	url = git@github.com:wangcheng714/fis-localstorage-php-backend.git
