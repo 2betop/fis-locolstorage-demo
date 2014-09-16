@@ -322,64 +322,90 @@ var require, define, F;
             }
         }
 
-        api.getChangeList = function(pkgs, done) {
-            var list = [];
+        function appendStyle(code) {
+            var dom = document.createElement('style');
+            dom.innerHTML = code;
+            head.appendChild(dom);
+        }
 
-            for (var i = 0, len = pkgs.length; i < len; i++) {
-                var item = pkgs[i];
-                var pkg = storage.get(item.id);
+        function each(obj, iterator) {
+            // is array
+            if (obj.splice) {
+                obj.forEach(iterator);
+            } else {
+                for (var key in obj) {
+                    hasProp(obj, key) && iterator(obj[key], key);
+                }
+            }
+        }
 
-                if (!pkg || pkg.hash !== item.hash) {
-                    list.push(item.id);
+        function isEmpty(obj) {
+            if (obj) {
+                for (var key in obj) {
+                    return false;
                 }
             }
 
+            return true;
+        }
+
+        api.getChangeList = function(pkgs, done) {
+            var list = [];
+            var ret = {};
+
+            each(pkgs, function(item) {
+                var pkg = storage.get(item.id);
+
+                if (!pkg) {
+                    ret[item.id] = [];
+                } else if (item.hash != pkg.hash) {
+                    ret[item.id] = [];
+                    list.push(item.id);
+                }
+            });
+
             if (list.length) {
-                ajax('/ls-diff.php?type=list&pid='+list.join(','), function(response) {
-                    var data = JSON.parse(response);
+                // 需要进一步检测
+                ajax('/fis-diff?type=list', function(response) {
+                    response = JSON.parse(response);
+                    var data = response.data;
 
-                    // update list data.
-                    for (var id in data) {
-                        if (!hasProp(data, id)) {
-                            continue;
-                        }
-
+                    each(data, function(item, id) {
                         var pkg = storage.get(id) || storage.set(id, {});
-                        var item = data[id];
-
-                        var oldlist = pkg.list;
+                        var oldlist = pkg.list || [];
 
                         pkg.list = item.list.concat();
                         pkg.hash = item.hash;
                         pkg.type = item.type;
-
                         pkg.data = item.data || {};
-                    }
-                    done(data);
-                });
+
+                        each(item.list, function(hash) {
+                            ~oldlist.indexOf(hash) || ret[id].push(hash);
+                        });
+                    })
+
+                    done(ret);
+                }, 'pids='+list.join(','));
             } else {
-                done();
+                done(ret);
             }
         };
 
         api.updatePkgs = function(data) {
-            // update list data.
-            for (var id in data) {
-                if (!hasProp(data, id)) {
-                    continue;
-                }
-
+            each(data, function(item, id) {
                 var pkg = storage.get(id) || storage.set(id, {});
-                var item = data[id];
+                var list = [];
 
-                for (var hash in item.data) {
-                    if (!hasProp(item.data, hash)) {
-                        continue;
-                    }
+                pkg.data = pkg.data || {};
+                each(item.data, function(part) {
+                    list.push(part.hash);
+                    pkg.data[part.hash] = part.content;
+                });
 
-                    pkg.data[hash] = item.data[hash];
-                }
-            }
+                pkg.hash = item.hash;
+                pkg.type = item.type;
+                (!pkg.list || !pkg.list.length) && (pkg.list = list);
+            });
 
             storage.save();
         };
@@ -387,43 +413,46 @@ var require, define, F;
         api.fetchPkgs = function(obj, done) {
             var params = [];
 
-            for (var key in obj) {
-                if (hasProp(obj, key)) {
-                    var item = obj[key];
-                    params.push('' + key + '=' + item.list.join(',') );
-                }
-            }
+            each(obj, function(list, id) {
+                params.push('' + id + '=' + list.join(','));
+            });
 
-            ajax('/ls-diff.php?type=data&'+params.join('&'), function(response) {
-                var data = JSON.parse(response);
-
+            ajax('/fis-diff?type=data', function(response) {
+                response = JSON.parse(response);
+                var data = response.data;
                 api.updatePkgs(data);
                 done();
-            });
+            }, params.join('&'));
         };
 
         api.load = function(pkgs, done) {
-            var runjs = function(data) {
-                if (data) {
-                    api.updatePkgs(data);
-                }
-
+            var runjs = function() {
                 var js = '';
-                for (var i = 0, len = pkgs.length; i < len; i++) {
-                    var item = pkgs[i];
+                var css = '';
+
+                each(pkgs, function(item) {
                     var pkg = storage.get(item.id);
                     var hashs = pkg.list;
+                    var content = '';
 
-                    for (var j = 0, ken = hashs.length; j < ken; j++) {
-                        js += pkg.data[hashs[j]];
+                    each(hashs, function(hash) {
+                        content += pkg.data[hash];
+                    });
+
+                    if (pkg.type === 'js') {
+                        js += content;
+                    } else {
+                        css += content;
                     }
-                }
+                });
+
+                css && appendStyle(css);
                 js && globalEval(js);
                 done();
             };
 
             api.getChangeList(pkgs, function(data) {
-                if (data) {
+                if (!isEmpty(data)) {
                     api.fetchPkgs(data, runjs);
                 } else {
                     runjs();

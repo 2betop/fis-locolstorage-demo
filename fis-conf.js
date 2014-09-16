@@ -15,4 +15,4 @@ fis.config.get('roadmap.path').unshift({
 });
 
 // npm install -g fis-postpackager-lsdiff-map
-fis.config.set('module.postpackager', 'lsdiff-map');
+fis.config.set('modules.postpackager', 'lsdiff-map');
