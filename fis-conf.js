@@ -9,5 +9,10 @@ fis.config.get('roadmap.path').unshift({
     release: '/$1'
 });
 
+fis.config.get('roadmap.path').unshift({
+    reg : /^\/data\/ls\-diff\.php$/i,
+    release: '/config/ls-diff.php'
+});
+
 // npm install -g fis-postpackager-lsdiff-map
 fis.config.set('module.postpackager', 'lsdiff-map');
