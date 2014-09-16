@@ -347,7 +347,9 @@ var require, define, F;
                         var pkg = storage.get(id) || storage.set(id, {});
                         var item = data[id];
 
-                        pkg.list = item.list;
+                        var oldlist = pkg.list;
+
+                        pkg.list = item.list.concat();
                         pkg.hash = item.hash;
                         pkg.type = item.type;
 
