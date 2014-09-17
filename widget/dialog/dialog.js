@@ -1,3 +1,3 @@
 module.exports = function() {
-    console.log('dialog1');
+    console.log('dialog3');
 };

@@ -364,7 +364,7 @@ var require, define, F;
                         pkg.list = item.list.concat();
                         pkg.hash = item.hash;
                         pkg.type = item.type;
-                        pkg.data = item.data || {};
+                        pkg.data = pkg.data || {};
 
                         each(item.list, function(hash) {
                             ~oldlist.indexOf(hash) || ret[id].push(hash);

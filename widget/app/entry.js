@@ -1,6 +1,8 @@
 var dialog = require('../dialog/dialog.js');
+var component = require('./compnent.js');
 
 module.exports = function() {
-    alert('hoho');
     dialog();
+    component();
+    alert('hoho');
 }
