@@ -4,3 +4,6 @@
 [submodule "data"]
 	path = data
 	url = git@github.com:wangcheng714/fis-localstorage-php-backend.git
+[submodule "static/mod"]
+	path = static/mod
+	url = git@github.com:2betop/mod.git

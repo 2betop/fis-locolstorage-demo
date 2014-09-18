@@ -1,5 +1,5 @@
 <!doctype html>
-{%html lang="en" framework="lsdemo:static/js/mod-ls.js"%}
+{%html lang="en" framework="lsdemo:static/mod/mod-ls.js"%}
     {%head%}
         <meta charset="utf-8">
         <meta http-equiv="X-UA-Compatible" content="IE=edge">
